@@ -8,9 +8,18 @@
         <servlet-class>com.sun.xml.ws.transport.http.servlet.WSServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet>
+    <servlet>
+        <servlet-name>UserService</servlet-name>
+        <servlet-class>com.sun.xml.ws.transport.http.servlet.WSServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
     <servlet-mapping>
         <servlet-name>Auth</servlet-name>
         <url-pattern>/Auth</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>UserService</servlet-name>
+        <url-pattern>/UserService</url-pattern>
     </servlet-mapping>
     <session-config>
         <session-timeout>

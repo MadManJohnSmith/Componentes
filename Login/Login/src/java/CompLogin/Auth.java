@@ -3,11 +3,7 @@ package CompLogin;
 import javax.jws.WebService;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 @WebService(serviceName = "Login")
 public class Auth {
