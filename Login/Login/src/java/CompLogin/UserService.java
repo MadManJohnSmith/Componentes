@@ -263,4 +263,43 @@ public class UserService {
             }
         }
     }
+
+    @WebMethod(operationName = "addUser")
+    public String addUser(String name, String username, String password, String rol, String fotoBase64) {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+
+        try {
+            conn = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            String sql = "INSERT INTO Usuarios (name, username, password, rol, foto) VALUES (?, ?, ?, ?, ?)";
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, name);
+            stmt.setString(2, username);
+            stmt.setString(3, password);
+            stmt.setString(4, rol);
+            stmt.setString(5, fotoBase64);
+
+            int rowsInserted = stmt.executeUpdate();
+            if (rowsInserted > 0) {
+                return "Success";
+            } else {
+                return "Error: No se pudo agregar el usuario.";
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Error: " + e.getMessage();
+        } finally {
+            try {
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
