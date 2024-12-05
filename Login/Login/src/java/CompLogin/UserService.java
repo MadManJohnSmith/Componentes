@@ -13,7 +13,7 @@ public class UserService {
     private static final String USER = "root";
     private static final String PASSWORD = "1234";
 
-    @WebMethod(operationName = "getUsersWithAttendance")
+    @WebMethod(operationName = "getUsersWithAttendance")//Carga la lista de usuarios
     public String getUsersWithAttendance() {
         List<String> jsonRows = new ArrayList<>();
         Connection conn = null;
@@ -57,7 +57,7 @@ public class UserService {
     }
 
     @WebMethod(operationName = "getUserDetails")
-    public List<String> getUserDetails(String username) {
+    public List<String> getUserDetails(String username) {//Carga detalles de usuario con su ultima entrada
         List<String> userDetails = new ArrayList<>();
 
         Connection conn = null;
@@ -114,7 +114,7 @@ public class UserService {
     }
 
     @WebMethod(operationName = "getUserDetailsJSON")
-    public String getUserDetailsJSON(String username) {
+    public String getUserDetailsJSON(String username) {//Carga detalles del usuario
         Connection conn = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -171,7 +171,7 @@ public class UserService {
     }
 
     @WebMethod(operationName = "deleteUser")
-    public String deleteUser(String username) {
+    public String deleteUser(String username) {//Eliminar usuario
         Connection conn = null;
         PreparedStatement stmt = null;
 
@@ -201,7 +201,7 @@ public class UserService {
     }
 
     @WebMethod(operationName = "updateUser")
-    public String updateUser(String username, String jsonChanges) {
+    public String updateUser(String username, String jsonChanges) {//Editar Usuario
         Connection conn = null;
         PreparedStatement stmt = null;
 
@@ -265,7 +265,7 @@ public class UserService {
     }
 
     @WebMethod(operationName = "addUser")
-    public String addUser(String name, String username, String password, String rol, String fotoBase64) {
+    public String addUser(String name, String username, String password, String rol, String fotoBase64) {//Añadir usuario
         Connection conn = null;
         PreparedStatement stmt = null;
 
@@ -302,4 +302,149 @@ public class UserService {
             }
         }
     }
+
+    @WebMethod(operationName = "getMonthlyRecords")
+    public String getMonthlyRecords(String username, String monthYear) {//Obtener registros del mes
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        StringBuilder jsonBuilder = new StringBuilder();
+
+        try {
+            conn = DriverManager.getConnection(URL, USER, PASSWORD);
+
+            String sql = "CALL GetMonthlyRecords(?, ?)";
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, username);
+            stmt.setString(2, monthYear);
+
+            rs = stmt.executeQuery();
+
+            jsonBuilder.append("{\"data\":[");
+            while (rs.next()) {
+                jsonBuilder.append("{\"fecha\":\"").append(rs.getString("fecha")).append("\",")
+                        .append("\"horaEntrada\":\"").append(rs.getString("horaEntrada")).append("\",")
+                        .append("\"horaSalida\":\"").append(rs.getString("horaSalida")).append("\",")
+                        .append("\"horaSalidaComida\":\"").append(rs.getString("horaSalidaComida")).append("\"},");
+            }
+            if (jsonBuilder.toString().endsWith(",")) {
+                jsonBuilder.deleteCharAt(jsonBuilder.length() - 1);
+            }
+            jsonBuilder.append("]}");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "{\"error\":\"" + e.getMessage() + "\"}";
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+                if (stmt != null) {
+                    stmt.close();
+                }
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return jsonBuilder.toString();
+    }
+
+    @WebMethod(operationName = "checkInOrOutNow")
+    public String checkInOrOutNow(String username) {
+        String response = "Operación realizada correctamente.";
+        String queryCheck = "SELECT * FROM registro WHERE username = ? AND fechaEntrada = CURDATE() AND horaSalida IS NULL";
+        String queryCheckIn = "INSERT INTO registro (username, fechaEntrada, horaEntrada) VALUES (?, CURDATE(), CURTIME())";
+        String queryCheckOut = "UPDATE registro SET horaSalida = CURTIME(), fechaSalida = CURDATE() WHERE username = ? AND fechaEntrada = CURDATE() AND horaSalida IS NULL";
+
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            try (PreparedStatement stmtCheck = conn.prepareStatement(queryCheck)) {
+                stmtCheck.setString(1, username);
+                ResultSet rs = stmtCheck.executeQuery();
+
+                if (rs.next()) {
+                    // Actualizar con hora de salida
+                    try (PreparedStatement stmtOut = conn.prepareStatement(queryCheckOut)) {
+                        stmtOut.setString(1, username);
+                        stmtOut.executeUpdate();
+                        response = "Hora de salida registrada correctamente.";
+                    }
+                } else {
+                    // Insertar con hora de entrada
+                    try (PreparedStatement stmtIn = conn.prepareStatement(queryCheckIn)) {
+                        stmtIn.setString(1, username);
+                        stmtIn.executeUpdate();
+                        response = "Hora de entrada registrada correctamente.";
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            response = "Error en la operación: " + e.getMessage();
+        }
+
+        return response;
+    }
+
+    @WebMethod(operationName = "checkInOrOutCustom")
+    public String checkInOrOutCustom(String username, String customTime) {
+        String response = "Operación personalizada realizada correctamente.";
+        String queryCheck = "SELECT * FROM registro WHERE username = ? AND fechaEntrada = CURDATE() AND horaSalida IS NULL";
+        String queryCheckIn = "INSERT INTO registro (username, fechaEntrada, horaEntrada) VALUES (?, CURDATE(), ?)";
+        String queryCheckOut = "UPDATE registro SET horaSalida = ?, fechaSalida = CURDATE() WHERE username = ? AND fechaEntrada = CURDATE() AND horaSalida IS NULL";
+
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            try (PreparedStatement stmtCheck = conn.prepareStatement(queryCheck)) {
+                stmtCheck.setString(1, username);
+                ResultSet rs = stmtCheck.executeQuery();
+
+                if (rs.next()) {
+                    // Actualizar con hora de salida personalizada
+                    try (PreparedStatement stmtOut = conn.prepareStatement(queryCheckOut)) {
+                        stmtOut.setString(1, customTime);
+                        stmtOut.setString(2, username);
+                        stmtOut.executeUpdate();
+                        response = "Hora de salida personalizada registrada correctamente.";
+                    }
+                } else {
+                    // Insertar con hora de entrada personalizada
+                    try (PreparedStatement stmtIn = conn.prepareStatement(queryCheckIn)) {
+                        stmtIn.setString(1, username);
+                        stmtIn.setString(2, customTime);
+                        stmtIn.executeUpdate();
+                        response = "Hora de entrada personalizada registrada correctamente.";
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            response = "Error en la operación personalizada: " + e.getMessage();
+        }
+
+        return response;
+    }
+
+    @WebMethod(operationName = "breakTime")
+    public String breakTime(String username) {
+        String response = "Descanso registrado correctamente.";
+        String queryUpdate = "UPDATE registro SET horaSalidaComida = CURTIME() WHERE username = ? AND fechaEntrada = CURDATE() AND horaSalida IS NULL";
+
+        try (Connection conn = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            try (PreparedStatement stmtUpdate = conn.prepareStatement(queryUpdate)) {
+                stmtUpdate.setString(1, username);
+                int rowsAffected = stmtUpdate.executeUpdate();
+
+                if (rowsAffected == 0) {
+                    response = "No se pudo registrar el descanso. Verifique si ya hay una hora de salida.";
+                }
+            }
+        } catch (SQLException e) {
+            response = "Error al registrar el descanso: " + e.getMessage();
+        }
+
+        return response;
+    }
+
 }
